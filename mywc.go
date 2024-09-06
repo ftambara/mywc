@@ -3,57 +3,75 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"os"
 )
 
-type CountMode int
+type countMode int
 
 const (
-	BYTES CountMode = iota
-	CHARS
-	LINES
-	WORDS
+	bytes countMode = iota
+	chars
+	lines
+	words
 	INVALID
 )
 
-func (m CountMode) String() string {
+func (m countMode) String() string {
 	switch m {
-	case BYTES:
-		return "BYTES"
-	case CHARS:
-		return "CHARS"
-	case LINES:
-		return "LINES"
-	case WORDS:
-		return "WORDS"
+	case bytes:
+		return "bytes"
+	case chars:
+		return "chars"
+	case lines:
+		return "lines"
+	case words:
+		return "words"
 	default:
 		panic("Invalid mode")
 	}
 }
 
-func main() {
-	bytesMode := flag.Bool("bytes", false, "print the byte counts")
-	charsMode := flag.Bool("chars", false, "print the character counts")
-	linesMode := flag.Bool("lines", false, "print the newline counts")
-	wordsMode := flag.Bool("words", false, "print the word counts")
+func parseModes(args []string) ([]countMode, error) {
+	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	bytesMode := f.Bool("bytes", false, "print the byte counts")
+	charsMode := f.Bool("chars", false, "print the character counts")
+	linesMode := f.Bool("lines", false, "print the newline counts")
+	wordsMode := f.Bool("words", false, "print the word counts")
 
-	flag.Parse()
+	err := f.Parse(args)
+	if err != nil {
+		return nil, err
+	}
 
-	var countModes []CountMode
-	if *bytesMode {
-		countModes = append(countModes, BYTES)
+	if len(f.Args()) > 0 {
+		return nil, fmt.Errorf("unrecognized arguments: %v", f.Args())
 	}
-	if *charsMode {
-		countModes = append(countModes, CHARS)
-	}
+
+	var countModes []countMode
 	if *linesMode {
-		countModes = append(countModes, LINES)
+		countModes = append(countModes, lines)
 	}
 	if *wordsMode {
-		countModes = append(countModes, WORDS)
+		countModes = append(countModes, words)
+	}
+	if *charsMode {
+		countModes = append(countModes, chars)
+	}
+	if *bytesMode {
+		countModes = append(countModes, bytes)
 	}
 	if len(countModes) == 0 {
-		countModes = []CountMode{BYTES, CHARS, LINES, WORDS}
+		countModes = []countMode{lines, words, bytes}
 	}
 
+	return countModes, nil
+}
+
+func main() {
+	countModes, err := parseModes(os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
 	fmt.Printf("%v\n", countModes)
 }
