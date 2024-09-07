@@ -11,33 +11,57 @@ func assertSlice[C comparable](t *testing.T, expected []C, got []C) {
 	}
 }
 
-func Test_parseModes(t *testing.T) {
-	countModes, err := parseModes([]string{"-chars"})
+func TestParsingCountModes(t *testing.T) {
+	conf, err := parseArgs([]string{"-chars"})
 	if err != nil {
 		t.Error("unexpected error", err)
 	}
-	assertSlice(t, []countMode{chars}, countModes)
+	assertSlice(t, []countMode{chars}, conf.countModes)
 
-	countModes, err = parseModes([]string{"-chars", "-words"})
+	conf, err = parseArgs([]string{"-chars", "-words"})
 	if err != nil {
 		t.Error("unexpected error", err)
 	}
-	assertSlice(t, []countMode{words, chars}, countModes)
+	assertSlice(t, []countMode{words, chars}, conf.countModes)
 
-	countModes, err = parseModes([]string{})
+	conf, err = parseArgs([]string{})
 	if err != nil {
 		t.Error("unexpected error", err)
 	}
-	assertSlice(t, []countMode{lines, words, bytes}, countModes)
+	assertSlice(t, []countMode{lines, words, bytes}, conf.countModes)
 
-	countModes, err = parseModes([]string{"-lines", "-lines"})
+	conf, err = parseArgs([]string{"-lines", "-lines"})
 	if err != nil {
 		t.Error("unexpected error", err)
 	}
-	assertSlice(t, []countMode{lines}, countModes)
+	assertSlice(t, []countMode{lines}, conf.countModes)
 
-	_, err = parseModes([]string{"wrongArg"})
-	if err == nil {
-		t.Error("should return a non-nil error")
+	conf, err = parseArgs([]string{"file"})
+	if err != nil {
+		t.Error("unexpected error", err)
 	}
+	assertSlice(t, []countMode{lines, words, bytes}, conf.countModes)
+}
+
+func TestParsingModesAndArgs(t *testing.T) {
+	conf, err := parseArgs([]string{"-chars", "file"})
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+	assertSlice(t, []countMode{chars}, conf.countModes)
+	assertSlice(t, []string{"file"}, conf.files)
+
+	conf, err = parseArgs([]string{"-chars", "-words", "file1", "file2"})
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+	assertSlice(t, []countMode{words, chars}, conf.countModes)
+	assertSlice(t, []string{"file1", "file2"}, conf.files)
+
+	conf, err = parseArgs([]string{"-bytes"})
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+	assertSlice(t, []countMode{bytes}, conf.countModes)
+	assertSlice(t, []string{}, conf.files)
 }

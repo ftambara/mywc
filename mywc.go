@@ -32,20 +32,23 @@ func (m countMode) String() string {
 	}
 }
 
-func parseModes(args []string) ([]countMode, error) {
+type config struct {
+	files      []string
+	countModes []countMode
+}
+
+func parseArgs(args []string) (config, error) {
 	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	bytesMode := f.Bool("bytes", false, "print the byte counts")
 	charsMode := f.Bool("chars", false, "print the character counts")
 	linesMode := f.Bool("lines", false, "print the newline counts")
 	wordsMode := f.Bool("words", false, "print the word counts")
 
+	conf := config{}
+
 	err := f.Parse(args)
 	if err != nil {
-		return nil, err
-	}
-
-	if len(f.Args()) > 0 {
-		return nil, fmt.Errorf("unrecognized arguments: %v", f.Args())
+		return conf, err
 	}
 
 	var countModes []countMode
@@ -65,13 +68,15 @@ func parseModes(args []string) ([]countMode, error) {
 		countModes = []countMode{lines, words, bytes}
 	}
 
-	return countModes, nil
+	conf.countModes = countModes
+	conf.files = f.Args()
+	return conf, nil
 }
 
 func main() {
-	countModes, err := parseModes(os.Args[1:])
+	conf, err := parseArgs(os.Args[1:])
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%v\n", countModes)
+	fmt.Printf("modes: %v, files: %v\n", conf.countModes, conf.files)
 }
