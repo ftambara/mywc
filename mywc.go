@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -87,6 +88,22 @@ func countLines(r io.Reader) (uint, error) {
 		return count, err
 	}
 	return count, nil
+}
+
+func countBytes(r io.Reader) (uint, error) {
+	buffer := make([]byte, bufferSize)
+	count := 0
+	for {
+		n, err := r.Read(buffer)
+		count += n
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return uint(count), err
+		}
+	}
+	return uint(count), nil
 }
 
 type namedReader struct {

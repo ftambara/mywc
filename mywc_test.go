@@ -104,3 +104,41 @@ func TestCountLines(t *testing.T) {
 		t.Error("expected 3 lines, got", lines)
 	}
 }
+
+func TestCountBytes(t *testing.T) {
+	r := bytes.NewReader([]byte{})
+	bytesN, err := countBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if bytesN != 0 {
+		t.Error("expected 0 bytes, got", bytesN)
+	}
+
+	r = bytes.NewReader([]byte{1, 100, 0})
+	bytesN, err = countBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if bytesN != 3 {
+		t.Error("expected 3 bytes, got", bytesN)
+	}
+
+	r = bytes.NewReader([]byte("abc"))
+	bytesN, err = countBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if bytesN != 3 {
+		t.Error("expected 3 bytes, got", bytesN)
+	}
+
+	r = bytes.NewReader([]byte("Á¥\næ"))
+	bytesN, err = countBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if bytesN != 7 {
+		t.Error("expected 7 bytes, got", bytesN)
+	}
+}
