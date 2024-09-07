@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 )
 
 const bufferSize = 1024
@@ -88,10 +89,39 @@ func countLines(r io.Reader) (uint, error) {
 	return count, nil
 }
 
+type namedReader struct {
+	name string
+	r    io.Reader
+}
+
 func main() {
 	conf, err := parseArgs(os.Args[1:])
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("modes: %v, files: %v\n", conf.countModes, conf.files)
+
+	readers := make([]namedReader, max(len(conf.files), 1))
+	if len(conf.files) == 0 {
+		readers[0] = namedReader{r: os.Stdin}
+	} else {
+		for i, name := range conf.files {
+			f, err := os.Open(name)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer f.Close()
+
+			readers[i] = namedReader{name: name, r: f}
+		}
+	}
+
+	if slices.Contains(conf.countModes, byLines) {
+		for _, r := range readers {
+			lines, err := countLines(r.r)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("%v\t%v\n", lines, r.name)
+		}
+	}
 }
