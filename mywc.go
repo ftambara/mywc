@@ -10,22 +10,21 @@ import (
 type countMode int
 
 const (
-	bytes countMode = iota
-	chars
-	lines
-	words
-	INVALID
+	byBytes countMode = iota
+	byChars
+	byLines
+	byWords
 )
 
 func (m countMode) String() string {
 	switch m {
-	case bytes:
+	case byBytes:
 		return "bytes"
-	case chars:
+	case byChars:
 		return "chars"
-	case lines:
+	case byLines:
 		return "lines"
-	case words:
+	case byWords:
 		return "words"
 	default:
 		panic("Invalid mode")
@@ -53,19 +52,19 @@ func parseArgs(args []string) (config, error) {
 
 	var countModes []countMode
 	if *linesMode {
-		countModes = append(countModes, lines)
+		countModes = append(countModes, byLines)
 	}
 	if *wordsMode {
-		countModes = append(countModes, words)
+		countModes = append(countModes, byWords)
 	}
 	if *charsMode {
-		countModes = append(countModes, chars)
+		countModes = append(countModes, byChars)
 	}
 	if *bytesMode {
-		countModes = append(countModes, bytes)
+		countModes = append(countModes, byBytes)
 	}
 	if len(countModes) == 0 {
-		countModes = []countMode{lines, words, bytes}
+		countModes = []countMode{byLines, byWords, byBytes}
 	}
 
 	conf.countModes = countModes
