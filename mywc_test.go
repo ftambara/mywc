@@ -91,7 +91,7 @@ func TestCountLines(t *testing.T) {
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if lines != 2 {
+	if lines != 1 {
 		t.Error("expected 1 lines, got", lines)
 	}
 

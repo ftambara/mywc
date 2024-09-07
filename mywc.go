@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -79,15 +79,19 @@ func parseArgs(args []string) (config, error) {
 }
 
 func countLines(r io.Reader) (uint, error) {
-	scanner := bufio.NewScanner(r)
-	var count uint = 0
-	for scanner.Scan() {
-		count++
+	buffer := make([]byte, bufferSize)
+	count := 0
+	for {
+		n, err := r.Read(buffer)
+		count += bytes.Count(buffer[:n], []byte("\n"))
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return uint(count), err
+		}
 	}
-	if err := scanner.Err(); err != nil {
-		return count, err
-	}
-	return count, nil
+	return uint(count), nil
 }
 
 func countBytes(r io.Reader) (uint, error) {
