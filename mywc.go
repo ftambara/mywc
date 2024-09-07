@@ -38,7 +38,7 @@ type config struct {
 }
 
 func parseArgs(args []string) (config, error) {
-	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	bytesMode := f.Bool("bytes", false, "print the byte counts")
 	charsMode := f.Bool("chars", false, "print the character counts")
 	linesMode := f.Bool("lines", false, "print the newline counts")
