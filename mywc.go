@@ -11,7 +11,7 @@ import (
 	"slices"
 )
 
-const bufferSize = 1024
+const bufferSize = 8192
 
 type countMode int
 
