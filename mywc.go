@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
+
+const bufferSize = 1024
 
 type countMode int
 
@@ -70,6 +74,18 @@ func parseArgs(args []string) (config, error) {
 	conf.countModes = countModes
 	conf.files = f.Args()
 	return conf, nil
+}
+
+func countLines(r io.Reader) (uint, error) {
+	scanner := bufio.NewScanner(r)
+	var count uint = 0
+	for scanner.Scan() {
+		count++
+	}
+	if err := scanner.Err(); err != nil {
+		return count, err
+	}
+	return count, nil
 }
 
 func main() {
