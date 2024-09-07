@@ -15,31 +15,31 @@ func assertSlice[C comparable](t *testing.T, expected []C, got []C) {
 func TestParsingCountModes(t *testing.T) {
 	conf, err := parseArgs([]string{"-chars"})
 	if err != nil {
-		t.Error("unexpected error", err)
+		t.Fatal("unexpected error", err)
 	}
 	assertSlice(t, []countMode{byChars}, conf.countModes)
 
 	conf, err = parseArgs([]string{"-chars", "-words"})
 	if err != nil {
-		t.Error("unexpected error", err)
+		t.Fatal("unexpected error", err)
 	}
 	assertSlice(t, []countMode{byWords, byChars}, conf.countModes)
 
 	conf, err = parseArgs([]string{})
 	if err != nil {
-		t.Error("unexpected error", err)
+		t.Fatal("unexpected error", err)
 	}
 	assertSlice(t, []countMode{byLines, byWords, byBytes}, conf.countModes)
 
 	conf, err = parseArgs([]string{"-lines", "-lines"})
 	if err != nil {
-		t.Error("unexpected error", err)
+		t.Fatal("unexpected error", err)
 	}
 	assertSlice(t, []countMode{byLines}, conf.countModes)
 
 	conf, err = parseArgs([]string{"file"})
 	if err != nil {
-		t.Error("unexpected error", err)
+		t.Fatal("unexpected error", err)
 	}
 	assertSlice(t, []countMode{byLines, byWords, byBytes}, conf.countModes)
 }
