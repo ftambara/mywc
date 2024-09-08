@@ -106,6 +106,7 @@ func (in *inspector) readAll(r io.Reader) error {
 	var (
 		lineCount uint
 		wordCount uint
+		charCount uint
 		byteCount uint
 		err       error
 	)
@@ -113,6 +114,8 @@ func (in *inspector) readAll(r io.Reader) error {
 		lineCount, err = counters.CountLines(r)
 	} else if slices.Equal(in.modes, []countMode{byWords}) {
 		wordCount, err = counters.CountWords(r)
+	} else if slices.Equal(in.modes, []countMode{byChars}) {
+		charCount, err = counters.CountChars(r)
 	} else if slices.Equal(in.modes, []countMode{byBytes}) {
 		byteCount, err = counters.CountBytes(r)
 	} else if slices.Equal(in.modes, []countMode{byLines, byBytes}) {
@@ -136,6 +139,8 @@ func (in *inspector) readAll(r io.Reader) error {
 			in.counts[i] = lineCount
 		case byWords:
 			in.counts[i] = wordCount
+		case byChars:
+			in.counts[i] = charCount
 		case byBytes:
 			in.counts[i] = byteCount
 		}
