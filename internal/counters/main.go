@@ -3,13 +3,86 @@ package counters
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"unicode/utf8"
 )
 
 const bufferSize = 8192
 
-func CountLines(r io.Reader) (uint, error) {
+type Options struct {
+	CountLines bool
+	CountWords bool
+	CountChars bool
+	CountBytes bool
+}
+
+var DefaultOptions = Options{
+	CountLines: true,
+	CountWords: true,
+	CountBytes: true,
+}
+
+func NewOptions(lines, words, chars, bytes bool) Options {
+	if !lines && !words && !chars && !bytes {
+		return DefaultOptions
+	}
+	return Options{
+		CountLines: lines,
+		CountWords: words,
+		CountChars: chars,
+		CountBytes: bytes,
+	}
+}
+
+func (opts Options) SelectCountingFn() CountingFn {
+	if opts.CountLines && !opts.CountWords && !opts.CountChars && !opts.CountBytes {
+		return CountLines
+	} else if opts.CountWords && !opts.CountLines && !opts.CountChars && !opts.CountBytes {
+		return CountWords
+	} else if opts.CountChars && !opts.CountLines && !opts.CountWords && !opts.CountBytes {
+		return CountChars
+	} else if opts.CountBytes && !opts.CountLines && !opts.CountWords && !opts.CountChars {
+		return CountBytes
+	} else if opts.CountLines && opts.CountBytes && !opts.CountWords && !opts.CountChars {
+		return CountLinesBytes
+	} else if !opts.CountChars {
+		return CountLinesWordsBytes
+	} else {
+		return CountLinesWordsCharsBytes
+	}
+}
+
+type Stats struct {
+	lines uint
+	words uint
+	chars uint
+	bytes uint
+}
+
+func (s Stats) Print(opts Options, name string) {
+	if opts.CountLines {
+		fmt.Printf("%d\t", s.lines)
+	}
+	if opts.CountWords {
+		fmt.Printf("%d\t", s.words)
+	}
+	if opts.CountChars {
+		fmt.Printf("%d\t", s.chars)
+	}
+	if opts.CountBytes {
+		fmt.Printf("%d\t", s.bytes)
+	}
+	if name != "" {
+		fmt.Printf("%s\n", name)
+	} else {
+		fmt.Printf("\n")
+	}
+}
+
+type CountingFn func(io.Reader) (Stats, error)
+
+func CountLines(r io.Reader) (Stats, error) {
 	count := 0
 	buffer := make([]byte, bufferSize)
 	for {
@@ -19,13 +92,13 @@ func CountLines(r io.Reader) (uint, error) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return uint(count), err
+			return Stats{}, err
 		}
 	}
-	return uint(count), nil
+	return Stats{lines: uint(count)}, nil
 }
 
-func CountWords(r io.Reader) (uint, error) {
+func CountWords(r io.Reader) (Stats, error) {
 	count := 0
 	buffer := make([]byte, bufferSize)
 	inWhitespace := true
@@ -45,17 +118,17 @@ func CountWords(r io.Reader) (uint, error) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return uint(count), err
+			return Stats{}, err
 		}
 	}
 	// EOF counts as WS
 	if !inWhitespace {
 		count++
 	}
-	return uint(count), nil
+	return Stats{words: uint(count)}, nil
 }
 
-func CountChars(r io.Reader) (uint, error) {
+func CountChars(r io.Reader) (Stats, error) {
 	count := 0
 	buffer := make([]byte, bufferSize)
 	writeStart := 0
@@ -89,13 +162,13 @@ func CountChars(r io.Reader) (uint, error) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return uint(count), err
+			return Stats{}, err
 		}
 	}
-	return uint(count), nil
+	return Stats{chars: uint(count)}, nil
 }
 
-func CountBytes(r io.Reader) (uint, error) {
+func CountBytes(r io.Reader) (Stats, error) {
 	count := 0
 	buffer := make([]byte, bufferSize)
 	for {
@@ -105,13 +178,13 @@ func CountBytes(r io.Reader) (uint, error) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return uint(count), err
+			return Stats{}, err
 		}
 	}
-	return uint(count), nil
+	return Stats{bytes: uint(count)}, nil
 }
 
-func CountLinesBytes(r io.Reader) ([2]uint, error) {
+func CountLinesBytes(r io.Reader) (Stats, error) {
 	var (
 		linesN int
 		bytesN int
@@ -125,13 +198,13 @@ func CountLinesBytes(r io.Reader) ([2]uint, error) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return [2]uint{}, err
+			return Stats{}, err
 		}
 	}
-	return [...]uint{uint(linesN), uint(bytesN)}, nil
+	return Stats{lines: uint(linesN), bytes: uint(bytesN)}, nil
 }
 
-func CountLinesWordsBytes(r io.Reader) ([3]uint, error) {
+func CountLinesWordsBytes(r io.Reader) (Stats, error) {
 	var (
 		lines        int
 		words        int
@@ -160,17 +233,21 @@ func CountLinesWordsBytes(r io.Reader) ([3]uint, error) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return [3]uint{}, err
+			return Stats{}, err
 		}
 	}
 	// EOF counts as WS
 	if !inWhitespace {
 		words++
 	}
-	return [...]uint{uint(lines), uint(words), uint(bytes)}, nil
+	return Stats{
+		lines: uint(lines),
+		words: uint(words),
+		bytes: uint(bytes),
+	}, nil
 }
 
-func CountLinesWordsCharsBytes(r io.Reader) ([4]uint, error) {
+func CountLinesWordsCharsBytes(r io.Reader) (Stats, error) {
 	var (
 		lines        int
 		words        int
@@ -226,12 +303,17 @@ func CountLinesWordsCharsBytes(r io.Reader) ([4]uint, error) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return [4]uint{}, err
+			return Stats{}, err
 		}
 	}
 	// EOF counts as WS
 	if !inWhitespace {
 		words++
 	}
-	return [...]uint{uint(lines), uint(words), uint(chars), uint(bytes)}, nil
+	return Stats{
+		lines: uint(lines),
+		words: uint(words),
+		chars: uint(chars),
+		bytes: uint(bytes),
+	}, nil
 }

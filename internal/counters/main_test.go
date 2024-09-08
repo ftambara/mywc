@@ -5,268 +5,227 @@ import (
 	"testing"
 )
 
+func assertStats(t *testing.T, expected, actual Stats) {
+	if expected.lines != actual.lines {
+		t.Errorf("expected %d lines, got %d", expected.lines, actual.lines)
+	}
+	if expected.words != actual.words {
+		t.Errorf("expected %d words, got %d", expected.words, actual.words)
+	}
+	if expected.chars != actual.chars {
+		t.Errorf("expected %d chars, got %d", expected.chars, actual.chars)
+	}
+	if expected.bytes != actual.bytes {
+		t.Errorf("expected %d bytes, got %d", expected.bytes, actual.bytes)
+	}
+}
+
 func TestCountLines(t *testing.T) {
 	r := bytes.NewReader([]byte(""))
-	lines, err := CountLines(r)
+	stats, err := CountLines(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if lines != 0 {
-		t.Error("expected 0 lines, got", lines)
-	}
+	assertStats(t, Stats{lines: 0}, stats)
 
 	r = bytes.NewReader([]byte("a\n"))
-	lines, err = CountLines(r)
+	stats, err = CountLines(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if lines != 1 {
-		t.Error("expected 1 line, got", lines)
-	}
+	assertStats(t, Stats{lines: 1}, stats)
 
 	r = bytes.NewReader([]byte("ab\ncd"))
-	lines, err = CountLines(r)
+	stats, err = CountLines(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if lines != 1 {
-		t.Error("expected 1 lines, got", lines)
-	}
+	assertStats(t, Stats{lines: 1}, stats)
 
 	r = bytes.NewReader([]byte("ab\n\ncd\n"))
-	lines, err = CountLines(r)
+	stats, err = CountLines(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if lines != 3 {
-		t.Error("expected 3 lines, got", lines)
-	}
+	assertStats(t, Stats{lines: 3}, stats)
 }
 
 func TestCountWords(t *testing.T) {
 	r := bytes.NewReader([]byte(""))
-	words, err := CountWords(r)
+	stats, err := CountWords(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if words != 0 {
-		t.Error("expected 0 words, got", words)
-	}
+	assertStats(t, Stats{words: 0}, stats)
 
 	r = bytes.NewReader([]byte("abc"))
-	words, err = CountWords(r)
+	stats, err = CountWords(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if words != 1 {
-		t.Error("expected 1 words, got", words)
-	}
+	assertStats(t, Stats{words: 1}, stats)
 
 	r = bytes.NewReader([]byte("a b\nc"))
-	words, err = CountWords(r)
+	stats, err = CountWords(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if words != 3 {
-		t.Error("expected 3 words, got", words)
-	}
+	assertStats(t, Stats{words: 3}, stats)
 
 	r = bytes.NewReader([]byte("a \n b\nc"))
-	words, err = CountWords(r)
+	stats, err = CountWords(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if words != 3 {
-		t.Error("expected 3 words, got", words)
-	}
+	assertStats(t, Stats{words: 3}, stats)
 
 	r = bytes.NewReader([]byte("a b\n"))
-	words, err = CountWords(r)
+	stats, err = CountWords(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if words != 2 {
-		t.Error("expected 2 words, got", words)
-	}
+	assertStats(t, Stats{words: 2}, stats)
 }
 
 func TestCountChars(t *testing.T) {
 	r := bytes.NewReader([]byte(""))
-	chars, err := CountChars(r)
+	stats, err := CountChars(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if chars != 0 {
-		t.Error("expected 0 chars, got", chars)
-	}
+	assertStats(t, Stats{chars: 0}, stats)
 
 	r = bytes.NewReader([]byte("abc"))
-	chars, err = CountChars(r)
+	stats, err = CountChars(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if chars != 3 {
-		t.Error("expected 3 chars, got", chars)
-	}
+	assertStats(t, Stats{chars: 3}, stats)
 
 	r = bytes.NewReader([]byte("Hello, 世界"))
-	chars, err = CountChars(r)
+	stats, err = CountChars(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if chars != 9 {
-		t.Error("expected 9 chars, got", chars)
-	}
+	assertStats(t, Stats{chars: 9}, stats)
 }
 
 func TestCountBytes(t *testing.T) {
 	r := bytes.NewReader([]byte{})
-	bytesN, err := CountBytes(r)
+	stats, err := CountBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if bytesN != 0 {
-		t.Error("expected 0 bytes, got", bytesN)
-	}
+	assertStats(t, Stats{bytes: 0}, stats)
 
 	r = bytes.NewReader([]byte{1, 100, 0})
-	bytesN, err = CountBytes(r)
+	stats, err = CountBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if bytesN != 3 {
-		t.Error("expected 3 bytes, got", bytesN)
-	}
+	assertStats(t, Stats{bytes: 3}, stats)
 
 	r = bytes.NewReader([]byte("abc"))
-	bytesN, err = CountBytes(r)
+	stats, err = CountBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if bytesN != 3 {
-		t.Error("expected 3 bytes, got", bytesN)
-	}
+	assertStats(t, Stats{bytes: 3}, stats)
 
 	r = bytes.NewReader([]byte("Á¥\næ"))
-	bytesN, err = CountBytes(r)
+	stats, err = CountBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if bytesN != 7 {
-		t.Error("expected 7 bytes, got", bytesN)
-	}
+	assertStats(t, Stats{bytes: 7}, stats)
 }
 
 func TestCountLinesBytes(t *testing.T) {
 	r := bytes.NewReader([]byte(""))
-	counts, err := CountLinesBytes(r)
+	stats, err := CountLinesBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [2]uint{0, 0} {
-		t.Error("expected [0 0], got", counts)
-	}
+	assertStats(t, Stats{lines: 0, bytes: 0}, stats)
 
 	r = bytes.NewReader([]byte("a\n"))
-	counts, err = CountLinesBytes(r)
+	stats, err = CountLinesBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [2]uint{1, 2} {
-		t.Error("expected [1 2], got", counts)
-	}
+	assertStats(t, Stats{lines: 1, bytes: 2}, stats)
 
 	r = bytes.NewReader([]byte("ab\ncd"))
-	counts, err = CountLinesBytes(r)
+	stats, err = CountLinesBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [2]uint{1, 5} {
-		t.Error("expected [1 5], got", counts)
-	}
+	assertStats(t, Stats{lines: 1, bytes: 5}, stats)
 
 	r = bytes.NewReader([]byte("ab\n\ncd\n"))
-	counts, err = CountLinesBytes(r)
+	stats, err = CountLinesBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [2]uint{3, 7} {
-		t.Error("expected [3 7], got", counts)
-	}
+	assertStats(t, Stats{lines: 3, bytes: 7}, stats)
 }
 
 func TestCountLinesWordsBytes(t *testing.T) {
 	r := bytes.NewReader([]byte(""))
-	counts, err := CountLinesWordsBytes(r)
+	stats, err := CountLinesWordsBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [3]uint{0, 0, 0} {
-		t.Error("expected [0 0 0], got", counts)
-	}
+	assertStats(t, Stats{lines: 0, words: 0, bytes: 0}, stats)
 
 	r = bytes.NewReader([]byte("a\n"))
-	counts, err = CountLinesWordsBytes(r)
+	stats, err = CountLinesWordsBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [3]uint{1, 1, 2} {
-		t.Error("expected [1 1 2], got", counts)
-	}
+	assertStats(t, Stats{lines: 1, words: 1, bytes: 2}, stats)
 
 	r = bytes.NewReader([]byte("ab\ncd"))
-	counts, err = CountLinesWordsBytes(r)
+	stats, err = CountLinesWordsBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [3]uint{1, 2, 5} {
-		t.Error("expected [1 2 5], got", counts)
-	}
+	assertStats(t, Stats{lines: 1, words: 2, bytes: 5}, stats)
 
 	r = bytes.NewReader([]byte("ab\n\ncd\n"))
-	counts, err = CountLinesWordsBytes(r)
+	stats, err = CountLinesWordsBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [3]uint{3, 2, 7} {
-		t.Error("expected [3 2 7], got", counts)
-	}
+	assertStats(t, Stats{lines: 3, words: 2, bytes: 7}, stats)
 }
 
 func TestCountLinesWordsCharsBytes(t *testing.T) {
 	r := bytes.NewReader([]byte(""))
-	counts, err := CountLinesWordsCharsBytes(r)
+	stats, err := CountLinesWordsCharsBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [4]uint{0, 0, 0, 0} {
-		t.Error("expected [0 0 0 0], got", counts)
-	}
+	assertStats(t, Stats{lines: 0, words: 0, chars: 0, bytes: 0}, stats)
 
 	r = bytes.NewReader([]byte("a\n"))
-	counts, err = CountLinesWordsCharsBytes(r)
+	stats, err = CountLinesWordsCharsBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [4]uint{1, 1, 2, 2} {
-		t.Error("expected [1 1 2 2], got", counts)
-	}
+	assertStats(t, Stats{lines: 1, words: 1, chars: 2, bytes: 2}, stats)
 
 	r = bytes.NewReader([]byte("世界"))
-	counts, err = CountLinesWordsCharsBytes(r)
+	stats, err = CountLinesWordsCharsBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [4]uint{0, 1, 2, 6} {
-		t.Error("expected [0 1 2 6], got", counts)
-	}
+	assertStats(t, Stats{lines: 0, words: 1, chars: 2, bytes: 6}, stats)
 
 	r = bytes.NewReader([]byte("ab\n\n测试\n"))
-	counts, err = CountLinesWordsCharsBytes(r)
+	stats, err = CountLinesWordsCharsBytes(r)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
-	if counts != [4]uint{3, 2, 7, 11} {
-		t.Error("expected [3 2 7 11], got", counts)
-	}
+	assertStats(t, Stats{lines: 3, words: 2, chars: 7, bytes: 11}, stats)
 }

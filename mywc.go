@@ -2,11 +2,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"os"
-	"slices"
 
 	"github.com/ftambara/mywc/internal/counters"
 )
@@ -36,8 +34,8 @@ func (m countMode) String() string {
 }
 
 type config struct {
-	files      []string
-	countModes []countMode
+	files []string
+	opts  counters.Options
 }
 
 func parseArgs(args []string) (config, error) {
@@ -54,105 +52,9 @@ func parseArgs(args []string) (config, error) {
 		return conf, err
 	}
 
-	var countModes []countMode
-	if *linesMode {
-		countModes = append(countModes, byLines)
-	}
-	if *wordsMode {
-		countModes = append(countModes, byWords)
-	}
-	if *charsMode {
-		countModes = append(countModes, byChars)
-	}
-	if *bytesMode {
-		countModes = append(countModes, byBytes)
-	}
-	if len(countModes) == 0 {
-		countModes = []countMode{byLines, byWords, byBytes}
-	}
-
-	conf.countModes = countModes
+	conf.opts = counters.NewOptions(*linesMode, *wordsMode, *charsMode, *bytesMode)
 	conf.files = f.Args()
 	return conf, nil
-}
-
-type inspector struct {
-	modes  []countMode
-	counts []uint
-}
-
-func newInspector(modes []countMode) (*inspector, error) {
-	unique := make(map[countMode]bool, len(modes))
-	for _, m := range modes {
-		_, ok := unique[m]
-		if ok {
-			return nil, fmt.Errorf("duplicate mode: %v", m)
-		}
-		unique[m] = true
-	}
-	return &inspector{
-		modes:  modes,
-		counts: make([]uint, len(modes)),
-	}, nil
-}
-
-func (in *inspector) resetCounts() {
-	for i := range in.counts {
-		in.counts[i] = 0
-	}
-}
-
-func (in *inspector) readAll(r io.Reader) error {
-	var (
-		lineCount uint
-		wordCount uint
-		charCount uint
-		byteCount uint
-		err       error
-	)
-	if slices.Equal(in.modes, []countMode{byLines}) {
-		lineCount, err = counters.CountLines(r)
-	} else if slices.Equal(in.modes, []countMode{byWords}) {
-		wordCount, err = counters.CountWords(r)
-	} else if slices.Equal(in.modes, []countMode{byChars}) {
-		charCount, err = counters.CountChars(r)
-	} else if slices.Equal(in.modes, []countMode{byBytes}) {
-		byteCount, err = counters.CountBytes(r)
-	} else if slices.Equal(in.modes, []countMode{byLines, byBytes}) {
-		var counts [2]uint
-		counts, err = counters.CountLinesBytes(r)
-		lineCount = counts[0]
-		byteCount = counts[1]
-	} else if !slices.Contains(in.modes, byChars) {
-		var counts [3]uint
-		counts, err = counters.CountLinesWordsBytes(r)
-		lineCount = counts[0]
-		wordCount = counts[1]
-		byteCount = counts[2]
-	} else {
-		var counts [4]uint
-		counts, err = counters.CountLinesWordsCharsBytes(r)
-		lineCount = counts[0]
-		wordCount = counts[1]
-		charCount = counts[2]
-		byteCount = counts[3]
-	}
-	if err != nil {
-		return err
-	}
-	for i, m := range in.modes {
-		switch m {
-		case byLines:
-			in.counts[i] = lineCount
-		case byWords:
-			in.counts[i] = wordCount
-		case byChars:
-			in.counts[i] = charCount
-		case byBytes:
-			in.counts[i] = byteCount
-		}
-	}
-	return nil
 }
 
 type namedReader struct {
@@ -181,19 +83,15 @@ func main() {
 		}
 	}
 
-	insp, err := newInspector(conf.countModes)
+	count := conf.opts.SelectCountingFn()
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, nr := range namedReaders {
-		err = insp.readAll(nr.r)
+		stats, err := count(nr.r)
 		if err != nil {
 			log.Fatal(err)
 		}
-		for _, c := range insp.counts {
-			fmt.Printf("%v\t", c)
-		}
-		fmt.Printf("%v\n", nr.name)
-		insp.resetCounts()
+		stats.Print(conf.opts, nr.name)
 	}
 }
