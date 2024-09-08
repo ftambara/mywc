@@ -169,3 +169,69 @@ func CountLinesWordsBytes(r io.Reader) ([3]uint, error) {
 	}
 	return [...]uint{uint(lines), uint(words), uint(bytes)}, nil
 }
+
+func CountLinesWordsCharsBytes(r io.Reader) ([4]uint, error) {
+	var (
+		lines        int
+		words        int
+		chars        int
+		bytes        int
+		inWhitespace = true
+	)
+	buffer := make([]byte, bufferSize)
+	writeStart := 0
+	for {
+		n, err := r.Read(buffer[writeStart:])
+		bytes += n
+
+		// Count runes in buffer[:n]
+		b := buffer[:n]
+		for {
+			if len(b) == 0 {
+				writeStart = 0
+				break
+			}
+			rune, size := utf8.DecodeRune(b)
+			if rune == utf8.RuneError {
+				if len(b) > 4 {
+					// Cannot be an incomplete rune, discard first byte
+					b = b[1:]
+					continue
+				}
+				// Last bytes, let's read more and see if it gets fixed
+				copy(buffer, b)
+				writeStart = len(b)
+				break
+			}
+			chars++
+			b = b[size:]
+		}
+
+		// Count lines, words and bytes
+		for _, b := range buffer[:n] {
+			switch b {
+			case '\n':
+				lines++
+				fallthrough
+			case ' ', '\t':
+				if !inWhitespace {
+					words++
+					inWhitespace = true
+				}
+			default:
+				inWhitespace = false
+			}
+		}
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return [4]uint{}, err
+		}
+	}
+	// EOF counts as WS
+	if !inWhitespace {
+		words++
+	}
+	return [...]uint{uint(lines), uint(words), uint(chars), uint(bytes)}, nil
+}

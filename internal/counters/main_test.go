@@ -232,3 +232,41 @@ func TestCountLinesWordsBytes(t *testing.T) {
 		t.Error("expected [3 2 7], got", counts)
 	}
 }
+
+func TestCountLinesWordsCharsBytes(t *testing.T) {
+	r := bytes.NewReader([]byte(""))
+	counts, err := CountLinesWordsCharsBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if counts != [4]uint{0, 0, 0, 0} {
+		t.Error("expected [0 0 0 0], got", counts)
+	}
+
+	r = bytes.NewReader([]byte("a\n"))
+	counts, err = CountLinesWordsCharsBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if counts != [4]uint{1, 1, 2, 2} {
+		t.Error("expected [1 1 2 2], got", counts)
+	}
+
+	r = bytes.NewReader([]byte("世界"))
+	counts, err = CountLinesWordsCharsBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if counts != [4]uint{0, 1, 2, 6} {
+		t.Error("expected [0 1 2 6], got", counts)
+	}
+
+	r = bytes.NewReader([]byte("ab\n\n测试\n"))
+	counts, err = CountLinesWordsCharsBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if counts != [4]uint{3, 2, 7, 11} {
+		t.Error("expected [3 2 7 11], got", counts)
+	}
+}

@@ -123,12 +123,19 @@ func (in *inspector) readAll(r io.Reader) error {
 		counts, err = counters.CountLinesBytes(r)
 		lineCount = counts[0]
 		byteCount = counts[1]
-	} else {
+	} else if !slices.Contains(in.modes, byChars) {
 		var counts [3]uint
 		counts, err = counters.CountLinesWordsBytes(r)
 		lineCount = counts[0]
 		wordCount = counts[1]
 		byteCount = counts[2]
+	} else {
+		var counts [4]uint
+		counts, err = counters.CountLinesWordsCharsBytes(r)
+		lineCount = counts[0]
+		wordCount = counts[1]
+		charCount = counts[2]
+		byteCount = counts[3]
 	}
 	if err != nil {
 		return err
