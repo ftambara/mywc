@@ -78,36 +78,70 @@ func parseArgs(args []string) (config, error) {
 	return conf, nil
 }
 
-func countLines(r io.Reader) (uint, error) {
-	buffer := make([]byte, bufferSize)
-	count := 0
-	for {
-		n, err := r.Read(buffer)
-		count += bytes.Count(buffer[:n], []byte("\n"))
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return uint(count), err
-		}
-	}
-	return uint(count), nil
+type inspector struct {
+	modes  []countMode
+	counts []uint
 }
 
-func countBytes(r io.Reader) (uint, error) {
+func newInspector(modes []countMode) (*inspector, error) {
+	unique := make(map[countMode]bool, len(modes))
+	for _, m := range modes {
+		_, ok := unique[m]
+		if ok {
+			return nil, fmt.Errorf("duplicate mode: %v", m)
+		}
+		unique[m] = true
+	}
+	return &inspector{
+		modes:  modes,
+		counts: make([]uint, len(modes)),
+	}, nil
+}
+
+func (in *inspector) resetCounts() {
+	for i := range in.counts {
+		in.counts[i] = 0
+	}
+}
+
+func (in *inspector) readAll(r io.Reader) error {
+	lineCount := 0
+	byteCount := 0
+
+	var addCounts func(b []byte)
+	if slices.Equal(in.modes, []countMode{byLines}) {
+		addCounts = func(b []byte) {
+			lineCount += bytes.Count(b, []byte("\n"))
+		}
+	} else if slices.Equal(in.modes, []countMode{byLines, byBytes}) {
+		addCounts = func(b []byte) {
+			lineCount += bytes.Count(b, []byte("\n"))
+			byteCount += len(b)
+		}
+	} else {
+		addCounts = func(b []byte) { byteCount += len(b) }
+	}
+
 	buffer := make([]byte, bufferSize)
-	count := 0
 	for {
 		n, err := r.Read(buffer)
-		count += n
+		addCounts(buffer[:n])
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return uint(count), err
+			return err
 		}
 	}
-	return uint(count), nil
+	for i, m := range in.modes {
+		switch m {
+		case byBytes:
+			in.counts[i] = uint(byteCount)
+		case byLines:
+			in.counts[i] = uint(lineCount)
+		}
+	}
+	return nil
 }
 
 type namedReader struct {
@@ -121,9 +155,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	readers := make([]namedReader, max(len(conf.files), 1))
+	namedReaders := make([]namedReader, max(len(conf.files), 1))
 	if len(conf.files) == 0 {
-		readers[0] = namedReader{r: os.Stdin}
+		namedReaders[0] = namedReader{r: os.Stdin}
 	} else {
 		for i, name := range conf.files {
 			f, err := os.Open(name)
@@ -132,17 +166,23 @@ func main() {
 			}
 			defer f.Close()
 
-			readers[i] = namedReader{name: name, r: f}
+			namedReaders[i] = namedReader{name: name, r: f}
 		}
 	}
 
-	if slices.Contains(conf.countModes, byLines) {
-		for _, r := range readers {
-			lines, err := countLines(r.r)
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Printf("%v\t%v\n", lines, r.name)
+	insp, err := newInspector(conf.countModes)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, nr := range namedReaders {
+		err = insp.readAll(nr.r)
+		if err != nil {
+			log.Fatal(err)
 		}
+		for _, c := range insp.counts {
+			fmt.Printf("%v\t", c)
+		}
+		fmt.Printf("%v\n", nr.name)
+		insp.resetCounts()
 	}
 }
