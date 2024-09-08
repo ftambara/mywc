@@ -105,43 +105,140 @@ func (in *inspector) resetCounts() {
 }
 
 func (in *inspector) readAll(r io.Reader) error {
-	lineCount := 0
-	byteCount := 0
-
-	var addCounts func(b []byte)
+	var (
+		lineCount uint
+		wordCount uint
+		byteCount uint
+		err       error
+	)
 	if slices.Equal(in.modes, []countMode{byLines}) {
-		addCounts = func(b []byte) {
-			lineCount += bytes.Count(b, []byte("\n"))
-		}
-	} else if slices.Equal(in.modes, []countMode{byLines, byBytes}) {
-		addCounts = func(b []byte) {
-			lineCount += bytes.Count(b, []byte("\n"))
-			byteCount += len(b)
-		}
+		lineCount, err = countLines(r)
+	} else if slices.Equal(in.modes, []countMode{byWords}) {
+		wordCount, err = countWords(r)
+	} else if slices.Equal(in.modes, []countMode{byBytes}) {
+		byteCount, err = countBytes(r)
 	} else {
-		addCounts = func(b []byte) { byteCount += len(b) }
+		var counts [3]uint
+		counts, err = countLinesWordsBytes(r)
+		lineCount = counts[0]
+		wordCount = counts[1]
+		byteCount = counts[2]
 	}
+	if err != nil {
+		return err
+	}
+	for i, m := range in.modes {
+		switch m {
+		case byLines:
+			in.counts[i] = lineCount
+		case byWords:
+			in.counts[i] = wordCount
+		case byBytes:
+			in.counts[i] = byteCount
+		}
+	}
+	return nil
+}
 
+func countLines(r io.Reader) (uint, error) {
+	count := 0
 	buffer := make([]byte, bufferSize)
 	for {
 		n, err := r.Read(buffer)
-		addCounts(buffer[:n])
+		count += bytes.Count(buffer[:n], []byte("\n"))
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return err
+			return uint(count), err
 		}
 	}
-	for i, m := range in.modes {
-		switch m {
-		case byBytes:
-			in.counts[i] = uint(byteCount)
-		case byLines:
-			in.counts[i] = uint(lineCount)
+	return uint(count), nil
+}
+
+func countWords(r io.Reader) (uint, error) {
+	count := 0
+	buffer := make([]byte, bufferSize)
+	inWhitespace := true
+	for {
+		n, err := r.Read(buffer)
+		for _, b := range buffer[:n] {
+			if b == ' ' || b == '\n' || b == '\t' {
+				if !inWhitespace {
+					count++
+					inWhitespace = true
+				}
+			} else {
+				inWhitespace = false
+			}
+		}
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return uint(count), err
 		}
 	}
-	return nil
+	// EOF counts as WS
+	if !inWhitespace {
+		count++
+	}
+	return uint(count), nil
+}
+
+func countBytes(r io.Reader) (uint, error) {
+	count := 0
+	buffer := make([]byte, bufferSize)
+	for {
+		n, err := r.Read(buffer)
+		count += n
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return uint(count), err
+		}
+	}
+	return uint(count), nil
+}
+
+func countLinesWordsBytes(r io.Reader) ([3]uint, error) {
+	var (
+		lines        int
+		words        int
+		bytes        int
+		inWhitespace = true
+	)
+	buffer := make([]byte, bufferSize)
+	for {
+		n, err := r.Read(buffer)
+		bytes += n
+		for _, b := range buffer[:n] {
+			switch b {
+			case '\n':
+				lines++
+				fallthrough
+			case ' ', '\t':
+				if !inWhitespace {
+					words++
+					inWhitespace = true
+				}
+			default:
+				inWhitespace = false
+			}
+		}
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return [3]uint{}, err
+		}
+	}
+	// EOF counts as WS
+	if !inWhitespace {
+		words++
+	}
+	return [...]uint{uint(lines), uint(words), uint(bytes)}, nil
 }
 
 type namedReader struct {
