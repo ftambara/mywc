@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"unicode/utf8"
 )
 
 const bufferSize = 8192
@@ -50,6 +51,46 @@ func CountWords(r io.Reader) (uint, error) {
 	// EOF counts as WS
 	if !inWhitespace {
 		count++
+	}
+	return uint(count), nil
+}
+
+func CountChars(r io.Reader) (uint, error) {
+	count := 0
+	buffer := make([]byte, bufferSize)
+	writeStart := 0
+	for {
+		n, err := r.Read(buffer[writeStart:])
+		b := buffer[:n]
+
+		// Count runes in buffer[:n]
+		for {
+			if len(b) == 0 {
+				writeStart = 0
+				break
+			}
+			rune, size := utf8.DecodeRune(b)
+			if rune == utf8.RuneError {
+				if len(b) > 4 {
+					// Cannot be an incomplete rune, discard first byte
+					b = b[1:]
+					continue
+				}
+				// Last bytes, let's read more and see if it gets fixed
+				copy(buffer, b)
+				writeStart = len(b)
+				break
+			}
+			count++
+			b = b[size:]
+		}
+
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return uint(count), err
+		}
 	}
 	return uint(count), nil
 }

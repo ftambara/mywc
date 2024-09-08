@@ -43,44 +43,6 @@ func TestCountLines(t *testing.T) {
 	}
 }
 
-func TestCountBytes(t *testing.T) {
-	r := bytes.NewReader([]byte{})
-	bytesN, err := CountBytes(r)
-	if err != nil {
-		t.Fatal("unexpected error", err)
-	}
-	if bytesN != 0 {
-		t.Error("expected 0 bytes, got", bytesN)
-	}
-
-	r = bytes.NewReader([]byte{1, 100, 0})
-	bytesN, err = CountBytes(r)
-	if err != nil {
-		t.Fatal("unexpected error", err)
-	}
-	if bytesN != 3 {
-		t.Error("expected 3 bytes, got", bytesN)
-	}
-
-	r = bytes.NewReader([]byte("abc"))
-	bytesN, err = CountBytes(r)
-	if err != nil {
-		t.Fatal("unexpected error", err)
-	}
-	if bytesN != 3 {
-		t.Error("expected 3 bytes, got", bytesN)
-	}
-
-	r = bytes.NewReader([]byte("Á¥\næ"))
-	bytesN, err = CountBytes(r)
-	if err != nil {
-		t.Fatal("unexpected error", err)
-	}
-	if bytesN != 7 {
-		t.Error("expected 7 bytes, got", bytesN)
-	}
-}
-
 func TestCountWords(t *testing.T) {
 	r := bytes.NewReader([]byte(""))
 	words, err := CountWords(r)
@@ -125,6 +87,73 @@ func TestCountWords(t *testing.T) {
 	}
 	if words != 2 {
 		t.Error("expected 2 words, got", words)
+	}
+}
+
+func TestCountChars(t *testing.T) {
+	r := bytes.NewReader([]byte(""))
+	chars, err := CountChars(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if chars != 0 {
+		t.Error("expected 0 chars, got", chars)
+	}
+
+	r = bytes.NewReader([]byte("abc"))
+	chars, err = CountChars(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if chars != 3 {
+		t.Error("expected 3 chars, got", chars)
+	}
+
+	r = bytes.NewReader([]byte("Hello, 世界"))
+	chars, err = CountChars(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if chars != 9 {
+		t.Error("expected 9 chars, got", chars)
+	}
+}
+
+func TestCountBytes(t *testing.T) {
+	r := bytes.NewReader([]byte{})
+	bytesN, err := CountBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if bytesN != 0 {
+		t.Error("expected 0 bytes, got", bytesN)
+	}
+
+	r = bytes.NewReader([]byte{1, 100, 0})
+	bytesN, err = CountBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if bytesN != 3 {
+		t.Error("expected 3 bytes, got", bytesN)
+	}
+
+	r = bytes.NewReader([]byte("abc"))
+	bytesN, err = CountBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if bytesN != 3 {
+		t.Error("expected 3 bytes, got", bytesN)
+	}
+
+	r = bytes.NewReader([]byte("Á¥\næ"))
+	bytesN, err = CountBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if bytesN != 7 {
+		t.Error("expected 7 bytes, got", bytesN)
 	}
 }
 
