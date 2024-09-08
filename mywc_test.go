@@ -190,6 +190,44 @@ func TestCountWords(t *testing.T) {
 	}
 }
 
+func TestCountLinesBytes(t *testing.T) {
+	r := bytes.NewReader([]byte(""))
+	counts, err := countLinesBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if counts != [2]uint{0, 0} {
+		t.Error("expected [0 0], got", counts)
+	}
+
+	r = bytes.NewReader([]byte("a\n"))
+	counts, err = countLinesBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if counts != [2]uint{1, 2} {
+		t.Error("expected [1 2], got", counts)
+	}
+
+	r = bytes.NewReader([]byte("ab\ncd"))
+	counts, err = countLinesBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if counts != [2]uint{1, 5} {
+		t.Error("expected [1 5], got", counts)
+	}
+
+	r = bytes.NewReader([]byte("ab\n\ncd\n"))
+	counts, err = countLinesBytes(r)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
+	if counts != [2]uint{3, 7} {
+		t.Error("expected [3 7], got", counts)
+	}
+}
+
 func TestCountLinesWordsBytes(t *testing.T) {
 	r := bytes.NewReader([]byte(""))
 	counts, err := countLinesWordsBytes(r)

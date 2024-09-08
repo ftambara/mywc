@@ -117,6 +117,11 @@ func (in *inspector) readAll(r io.Reader) error {
 		wordCount, err = countWords(r)
 	} else if slices.Equal(in.modes, []countMode{byBytes}) {
 		byteCount, err = countBytes(r)
+	} else if slices.Equal(in.modes, []countMode{byLines, byBytes}) {
+		var counts [2]uint
+		counts, err = countLinesBytes(r)
+		lineCount = counts[0]
+		byteCount = counts[1]
 	} else {
 		var counts [3]uint
 		counts, err = countLinesWordsBytes(r)
@@ -200,6 +205,26 @@ func countBytes(r io.Reader) (uint, error) {
 		}
 	}
 	return uint(count), nil
+}
+
+func countLinesBytes(r io.Reader) ([2]uint, error) {
+	var (
+		linesN int
+		bytesN int
+	)
+	buffer := make([]byte, bufferSize)
+	for {
+		n, err := r.Read(buffer)
+		bytesN += n
+		linesN += bytes.Count(buffer[:n], []byte("\n"))
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return [2]uint{}, err
+		}
+	}
+	return [...]uint{uint(linesN), uint(bytesN)}, nil
 }
 
 func countLinesWordsBytes(r io.Reader) ([3]uint, error) {
